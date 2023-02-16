@@ -1,15 +1,16 @@
 package com.company.appmyalllearnsproject.payload;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.validation.constraints.NotNull;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Data
+@Getter
+@Setter
 public class RegisterDto {
+
     @NotNull(message = "FullName can not be null")
     private String fullName;
     @NotNull(message = "Username can not be null")

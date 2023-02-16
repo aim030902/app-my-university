@@ -2,6 +2,8 @@ package com.company.appmyalllearnsproject.service;
 
 import com.company.appmyalllearnsproject.entity.User;
 import com.company.appmyalllearnsproject.exception.ResourceNotFoundException;
+import com.company.appmyalllearnsproject.mapper.RoleMapper;
+import com.company.appmyalllearnsproject.mapper.UserMapper;
 import com.company.appmyalllearnsproject.payload.ApiResponse;
 import com.company.appmyalllearnsproject.payload.LoginDto;
 import com.company.appmyalllearnsproject.payload.RegisterDto;
@@ -31,6 +33,10 @@ public class AuthService implements UserDetailsService {
     @Autowired
     UserRepository userRepository;
     @Autowired
+    UserMapper userMapper;
+    @Autowired
+    RoleMapper roleMapper;
+    @Autowired
     RoleRepository roleRepository;
     @Lazy
     @Autowired
@@ -48,22 +54,21 @@ public class AuthService implements UserDetailsService {
     JavaMailSender javaMailSender;
 
     public ApiResponse register(RegisterDto dto) {
-        if (!dto.getPassword().equals(dto.getPrePassword())){
+        if (!dto.getPassword().equals(dto.getPrePassword())) {
             return new ApiResponse("PrePassword can not be null", false);
         }
         if (userRepository.existsByUsername(dto.getUsername())) {
             return new ApiResponse("User already exists", false);
         }
-        User user = userRepository.save(new User(
-                dto.getFullName(),
-                dto.getUsername(),
-                passwordEncoder.encode(dto.getPassword()),
-                roleRepository.findByName(AppConstants.USER).orElseThrow(() -> new ResourceNotFoundException("roles", "name", AppConstants.USER)),
-                UUID.randomUUID().toString(),
-                true
-        ));
+
+        User user = userMapper.entityFromRegisterDto(dto);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole(roleRepository.findByName(AppConstants.USER).orElseThrow(() -> new ResourceNotFoundException("roles", "name", AppConstants.USER)));
+        user.setEmailCode(UUID.randomUUID().toString());
+        user.setEnabled(false);
+        userRepository.save(user);
         boolean sendingEmail = sendingEmail(dto.getUsername(), user.getEmailCode());
-        if (sendingEmail){
+        if (sendingEmail) {
             System.out.println("Email sending");
         }
         return new ApiResponse("Register successfully, Confirm email " + user.getUsername(), true);
@@ -79,13 +84,12 @@ public class AuthService implements UserDetailsService {
             Authentication authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword()));
             String token = jwtProvider.generateToken(loginDto.getUsername(), ((User) authenticate.getPrincipal()).getRole());
             return new ApiResponse("Token", token, true);
-        }
-        catch (BadCredentialsException e){
+        } catch (BadCredentialsException e) {
             return new ApiResponse("Username or Password failed", false);
         }
     }
 
-    public boolean sendingEmail(String sendingEmail, String emailCode){
+    public boolean sendingEmail(String sendingEmail, String emailCode) {
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom("MyOffice@gmail.com");
@@ -94,14 +98,13 @@ public class AuthService implements UserDetailsService {
             mailMessage.setText("http://localhost:8000/api/auth/verifyEmail?emailCode=" + emailCode + "&email=" + sendingEmail);
             javaMailSender.send(mailMessage);
             return true;
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    public ApiResponse verifyEmail(String emailCode, String email){
+    public ApiResponse verifyEmail(String emailCode, String email) {
         Optional<User> optionalUser = userRepository.findByUsernameAndEmailCode(email, emailCode);
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();

@@ -1,19 +1,17 @@
 package com.company.appmyalllearnsproject.payload;
 
 import com.company.appmyalllearnsproject.entity.enums.Permission;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Data
+@Getter
+@Setter
 public class RoleDto {
-    private String name;
-    private String description;
-    @NotEmpty
-    private List<Permission> permissionList;
+        @NotNull(message = "Name can not be null") String name;
+        String description;
+        @NotEmpty
+        List<Permission> permissionList;
 }
